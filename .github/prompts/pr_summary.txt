@@ -1,7 +1,0 @@
-Based on the following Go code analysis and the Rust changes that were applied, write a concise PR description suitable for a GitHub PR body. Use markdown. Include: what changed in Go, what was translated to Rust, and any important notes for reviewers.
-
-GO CHANGES ANALYSIS:
-ANALYSIS_PLACEHOLDER
-
-RUST CHANGES APPLIED:
-RUST_OUTPUT_PLACEHOLDER

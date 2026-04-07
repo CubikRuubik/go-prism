@@ -53,10 +53,12 @@ jobs:
           python3 -c "
           import json
           diff = open('/tmp/go_diff.txt').read()
-          prompt = open('.github/prompts/analyze_go.txt').read().replace('DIFF_PLACEHOLDER', diff)
           payload = {
             'model': 'openai/gpt-4.1-mini',
-            'messages': [{'role': 'user', 'content': prompt}],
+            'messages': [{
+              'role': 'user',
+              'content': 'Analyze this Go code diff. Describe each change as a structured bullet point: what was added, modified, or removed. Be precise about function names, signatures, and logic.\n\nDiff:\n' + diff
+            }],
             'temperature': 0.1
           }
           print(json.dumps(payload))
@@ -98,14 +100,35 @@ jobs:
 
           python3 -c "
           import json
+
           analysis = open('/tmp/go_analysis.txt').read()
           rust_code = open('/tmp/rust_code.txt').read()
-          prompt = open('.github/prompts/generate_rust.txt').read() \
-            .replace('ANALYSIS_PLACEHOLDER', analysis) \
-            .replace('RUST_CODE_PLACEHOLDER', rust_code)
+
           payload = {
             'model': 'openai/gpt-4.1-mini',
-            'messages': [{'role': 'user', 'content': prompt}],
+            'messages': [{
+              'role': 'user',
+              'content': '''You are a Rust developer applying changes based on a Go change analysis.
+
+          TASK:
+          1. Read the analysis of recent Go changes
+          2. Read the current Rust code
+          3. If the Rust code already reflects these changes, output ONLY: NO CHANGES NEEDED
+          4. Otherwise, output the COMPLETE updated Rust file(s)
+
+          RULES:
+          - Output ONLY a JSON object mapping file paths to their full updated content
+          - Example: {\"src/main.rs\": \"fn main() { ... }\"}
+          - Use idiomatic Rust (Result, Option, ownership, etc.)
+          - Preserve existing Rust code that is unrelated to the changes
+          - No markdown fences, no explanations, only valid JSON or NO CHANGES NEEDED
+
+          GO CHANGES ANALYSIS:
+          ''' + analysis + '''
+
+          CURRENT RUST CODE:
+          ''' + rust_code
+            }],
             'temperature': 0.1
           }
           print(json.dumps(payload))
@@ -124,46 +147,6 @@ jobs:
           echo "===================================="
 
           echo "$CONTENT" > /tmp/rust_output.txt
-
-      - name: Generate PR summary
-        if: steps.diff.outputs.has_diff == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          RUST_OUTPUT=$(cat /tmp/rust_output.txt)
-          if [ "$RUST_OUTPUT" = "NO CHANGES NEEDED" ] || [ "$RUST_OUTPUT" = "FAILED" ]; then
-            echo "No PR summary needed"
-            exit 0
-          fi
-
-          python3 -c "
-          import json
-          analysis = open('/tmp/go_analysis.txt').read()
-          rust_output = open('/tmp/rust_output.txt').read()
-          prompt = open('.github/prompts/pr_summary.txt').read() \
-            .replace('ANALYSIS_PLACEHOLDER', analysis) \
-            .replace('RUST_OUTPUT_PLACEHOLDER', rust_output)
-          payload = {
-            'model': 'openai/gpt-4.1-mini',
-            'messages': [{'role': 'user', 'content': prompt}],
-            'temperature': 0.1
-          }
-          print(json.dumps(payload))
-          " > /tmp/summary_payload.json
-
-          RESPONSE=$(curl -s -X POST \
-            "https://models.github.ai/inference/chat/completions" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d @/tmp/summary_payload.json)
-
-          SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Failed to generate summary"')
-
-          echo "========== PR SUMMARY =========="
-          echo "$SUMMARY"
-          echo "================================"
-
-          echo "$SUMMARY" > /tmp/pr_summary.txt
 
       - name: Apply changes and create PR
         if: steps.diff.outputs.has_diff == 'true'
@@ -198,6 +181,7 @@ jobs:
 
           cd rust-repo
 
+          # Use same branch name as Go PR
           GO_BRANCH="${{ github.event.pull_request.head.ref }}"
           BRANCH="$GO_BRANCH"
 
@@ -214,20 +198,21 @@ jobs:
           git commit -m "${{ github.event.pull_request.title }}"
           git push "https://x-access-token:${CROSS_REPO_PAT}@github.com/CubikRuubik/rust-prism.git" "$BRANCH"
 
+          # Use same PR title as Go PR
           GO_PR_TITLE="${{ github.event.pull_request.title }}"
           GO_PR_URL="${{ github.event.pull_request.html_url }}"
+
+          PR_BODY="Automated Rust translation of Go changes.\n\nSource PR: ${GO_PR_URL}\n\n> Review carefully. LLM-generated code."
 
           curl -s -X POST \
             -H "Authorization: token $CROSS_REPO_PAT" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/CubikRuubik/rust-prism/pulls" \
             -d "$(python3 -c "
-          import json, os
-          summary = open('/tmp/pr_summary.txt').read() if os.path.exists('/tmp/pr_summary.txt') else 'Automated Rust translation of Go changes.'
-          body = summary + '\n\n---\nSource PR: $GO_PR_URL\n\n> Review carefully. LLM-generated code.'
+          import json
           print(json.dumps({
             'title': '''$GO_PR_TITLE''',
-            'body': body,
+            'body': '''$(echo -e "$PR_BODY")''',
             'head': '$BRANCH',
             'base': 'main'
           }))")"
