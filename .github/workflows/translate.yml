@@ -6,28 +6,11 @@ on:
     types: [closed]
     paths:
       - "**.go"
-  workflow_dispatch:
-    inputs:
-      base_sha:
-        description: 'Base SHA (before the PR)'
-        required: true
-      merge_sha:
-        description: 'Merge commit SHA'
-        required: true
-      pr_branch:
-        description: 'PR branch name'
-        required: true
-      pr_title:
-        description: 'PR title'
-        required: true
-      pr_url:
-        description: 'PR URL'
-        required: true
 
 jobs:
   analyze:
     name: "Analyze Go diff and apply to Rust"
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,9 +32,7 @@ jobs:
       - name: Get Go diff
         id: diff
         run: |
-          BASE_SHA=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_sha || github.event.pull_request.base.sha }}
-          MERGE_SHA=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.merge_sha || github.event.pull_request.merge_commit_sha }}
-          DIFF=$(git diff "$BASE_SHA" "$MERGE_SHA" -- '*.go')
+          DIFF=$(git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.merge_commit_sha }} -- '*.go')
           if [ -z "$DIFF" ]; then
             echo "No Go changes detected"
             echo "has_diff=false" >> $GITHUB_OUTPUT
@@ -217,47 +198,30 @@ jobs:
 
           cd rust-repo
 
-          BRANCH=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pr_branch || github.event.pull_request.head.ref }}
+          GO_BRANCH="${{ github.event.pull_request.head.ref }}"
+          BRANCH="$GO_BRANCH"
 
           git config user.name "translate-bot"
           git config user.email "translate-bot@users.noreply.github.com"
-
-          # Checkout existing remote branch or create a new one
-          if git ls-remote --exit-code origin "$BRANCH" > /dev/null 2>&1; then
-            echo "Branch $BRANCH already exists on remote, checking it out"
-            git fetch origin "$BRANCH"
-            git checkout -b "$BRANCH" "origin/$BRANCH"
-          else
-            git checkout -b "$BRANCH"
-          fi
-
+          git checkout -b "$BRANCH"
           git add -A
 
           if git diff --cached --quiet; then
             echo "No file changes to commit"
-          else
-            git commit -m "$GO_PR_TITLE"
-            git push "https://x-access-token:${CROSS_REPO_PAT}@github.com/CubikRuubik/rust-prism.git" "$BRANCH"
+            exit 0
           fi
 
-          GO_PR_TITLE=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pr_title || github.event.pull_request.title }}
-          GO_PR_URL=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pr_url || github.event.pull_request.html_url }}
+          git commit -m "${{ github.event.pull_request.title }}"
+          git push "https://x-access-token:${CROSS_REPO_PAT}@github.com/CubikRuubik/rust-prism.git" "$BRANCH"
 
-          # Check if a PR already exists for this branch
-          EXISTING_PR=$(curl -s \
+          GO_PR_TITLE="${{ github.event.pull_request.title }}"
+          GO_PR_URL="${{ github.event.pull_request.html_url }}"
+
+          curl -s -X POST \
             -H "Authorization: token $CROSS_REPO_PAT" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/CubikRuubik/rust-prism/pulls?head=CubikRuubik:${BRANCH}&state=open" \
-            | jq -r '.[0].html_url // ""')
-
-          if [ -n "$EXISTING_PR" ]; then
-            echo "PR already exists: $EXISTING_PR"
-          else
-            curl -s -X POST \
-              -H "Authorization: token $CROSS_REPO_PAT" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/CubikRuubik/rust-prism/pulls" \
-              -d "$(python3 -c "
+            "https://api.github.com/repos/CubikRuubik/rust-prism/pulls" \
+            -d "$(python3 -c "
           import json, os
           summary = open('/tmp/pr_summary.txt').read() if os.path.exists('/tmp/pr_summary.txt') else 'Automated Rust translation of Go changes.'
           body = summary + '\n\n---\nSource PR: $GO_PR_URL\n\n> Review carefully. LLM-generated code.'
@@ -267,4 +231,3 @@ jobs:
             'head': '$BRANCH',
             'base': 'main'
           }))")"
-          fi
