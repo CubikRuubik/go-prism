@@ -12,6 +12,7 @@ RULES:
 - Use idiomatic Rust (Result, Option, ownership, etc.)
 - Preserve existing Rust code that is unrelated to the changes
 - No markdown fences, no explanations, only valid JSON or NO CHANGES NEEDED
+- In case new code requires dependencies, update Cargo.toml accordingly. 
 
 GO CHANGES ANALYSIS:
 ANALYSIS_PLACEHOLDER
