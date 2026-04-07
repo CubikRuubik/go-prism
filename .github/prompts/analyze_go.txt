@@ -1,4 +1,0 @@
-Analyze this Go code diff. Describe each change as a structured bullet point: what was added, modified, or removed. Be precise about function names, signatures, and logic.
-
-Diff:
-DIFF_PLACEHOLDER
