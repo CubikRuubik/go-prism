@@ -60,8 +60,14 @@ jobs:
           echo "$DIFF" > /tmp/go_diff.txt
           echo "has_diff=true" >> $GITHUB_OUTPUT
 
+          # Collect full Go repo file tree for layout mirroring
+          find . -name '*.go' -not -path './.git/*' | sort > /tmp/go_tree.txt
+
           echo "========== GO DIFF =========="
           cat /tmp/go_diff.txt
+          echo "============================="
+          echo "========== GO TREE =========="
+          cat /tmp/go_tree.txt
           echo "============================="
 
       - name: Analyze Go changes
@@ -100,14 +106,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Collect all Rust project files: .rs sources + Cargo.toml
           RUST_CODE=""
-          for f in $(find rust-repo/src -name '*.rs' 2>/dev/null); do
+          while IFS= read -r -d '' f; do
             RELATIVE=${f#rust-repo/}
             RUST_CODE="$RUST_CODE
           // FILE: $RELATIVE
           $(cat "$f")
           "
-          done
+          done < <(find rust-repo -not -path '*/target/*' -not -path '*/.git/*' \
+            \( -name '*.rs' -o -name 'Cargo.toml' \) -print0 | sort -z)
 
           if [ -z "$RUST_CODE" ]; then
             RUST_CODE="// No Rust source files found"
@@ -115,13 +123,21 @@ jobs:
 
           echo "$RUST_CODE" > /tmp/rust_code.txt
 
+          # Collect Rust file tree
+          find rust-repo -not -path '*/target/*' -not -path '*/.git/*' \
+            \( -name '*.rs' -o -name 'Cargo.toml' \) | sed 's|rust-repo/||' | sort > /tmp/rust_tree.txt
+
           python3 -c "
           import json
           analysis = open('/tmp/go_analysis.txt').read()
           rust_code = open('/tmp/rust_code.txt').read()
+          go_tree = open('/tmp/go_tree.txt').read()
+          rust_tree = open('/tmp/rust_tree.txt').read()
           prompt = open('.github/prompts/generate_rust.txt').read() \
             .replace('ANALYSIS_PLACEHOLDER', analysis) \
-            .replace('RUST_CODE_PLACEHOLDER', rust_code)
+            .replace('RUST_CODE_PLACEHOLDER', rust_code) \
+            .replace('GO_TREE_PLACEHOLDER', go_tree) \
+            .replace('RUST_TREE_PLACEHOLDER', rust_tree)
           payload = {
             'model': 'openai/gpt-4.1-mini',
             'messages': [{'role': 'user', 'content': prompt}],
