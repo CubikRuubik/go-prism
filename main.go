@@ -27,4 +27,6 @@ func main() {
 	for _, r := range results {
 		fmt.Printf("job %d: %d² = %d (took %s)\n", r.JobID, jobs[r.JobID-1].Value, r.Output, r.Took)
 	}
+
+	printStats(computeStats(results))
 }
