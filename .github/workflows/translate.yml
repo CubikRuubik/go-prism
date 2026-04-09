@@ -227,8 +227,8 @@ jobs:
 
           cd rust-repo
 
-          git config user.name "translate-bot"
-          git config user.email "translate-bot@users.noreply.github.com"
+          git config user.name "code-prism-bot"
+          git config user.email "code-prism-bot@users.noreply.github.com"
 
           # Checkout existing remote branch or create a new one
           if git ls-remote --exit-code origin "$BRANCH" > /dev/null 2>&1; then
