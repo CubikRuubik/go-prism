@@ -58,7 +58,10 @@ func runPipeline(ctx context.Context, jobs []Job, workers int) ([]Result, error)
 					}
 					res, err := process(job)
 					if err != nil {
-						return err
+						res, err = process(job)
+						if err != nil {
+							return err
+						}
 					}
 					resultCh <- res
 				}
