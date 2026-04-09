@@ -265,7 +265,11 @@ jobs:
               -d "$(python3 -c "
           import json, os
           summary = open('/tmp/pr_summary.txt').read() if os.path.exists('/tmp/pr_summary.txt') else 'Automated Rust translation of Go changes.'
-          body = summary + '\n\n---\nSource PR: $GO_PR_URL\n\n> Review carefully. LLM-generated code.'
+          analysis = open('/tmp/go_analysis.txt').read() if os.path.exists('/tmp/go_analysis.txt') else ''
+          body = summary
+          if analysis:
+            body += '\n\n---\n## Go Changes Analysis\n' + analysis
+          body += '\n\n---\nSource PR: $GO_PR_URL\n\n> Review carefully. LLM-generated code.'
           print(json.dumps({
             'title': '''$GO_PR_TITLE''',
             'body': body,
