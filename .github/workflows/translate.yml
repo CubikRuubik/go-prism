@@ -1,295 +1,297 @@
-name: Analyze Go Changes
+# name: Analyze Go Changes
 
-on:
-  pull_request:
-    branches: [main]
-    types: [closed]
-    paths:
-      - "**.go"
-  workflow_dispatch:
-    inputs:
-      base_sha:
-        description: "Base SHA (before the PR)"
-        required: true
-      merge_sha:
-        description: "Merge commit SHA"
-        required: true
-      pr_branch:
-        description: "PR branch name"
-        required: true
-      pr_title:
-        description: "PR title"
-        required: true
-      pr_url:
-        description: "PR URL"
-        required: true
+# on:
+#   pull_request:
+#     branches: [main]
+#     types: [closed]
+#     paths:
+#       - "**.go"
+#   workflow_dispatch:
+#     inputs:
+#       base_sha:
+#         description: "Base SHA (before the PR)"
+#         required: true
+#       merge_sha:
+#         description: "Merge commit SHA"
+#         required: true
+#       pr_branch:
+#         description: "PR branch name"
+#         required: true
+#       pr_title:
+#         description: "PR title"
+#         required: true
+#       pr_url:
+#         description: "PR URL"
+#         required: true
 
-jobs:
-  analyze:
-    name: "Analyze Go diff and apply to Rust"
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      models: read
+# jobs:
+#   analyze:
+#     name: "Analyze Go diff and apply to Rust"
+#     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: read
+#       models: read
 
-    steps:
-      - name: Checkout Go repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+#     steps:
+#       - name: Checkout Go repo
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
 
-      - name: Checkout Rust repo
-        uses: actions/checkout@v4
-        with:
-          repository: CubikRuubik/rust-prism
-          token: ${{ secrets.CROSS_REPO_PAT }}
-          path: rust-repo
+#       - name: Checkout Rust repo
+#         uses: actions/checkout@v4
+#         with:
+#           repository: CubikRuubik/rust-prism
+#           token: ${{ secrets.CROSS_REPO_PAT }}
+#           path: rust-repo
 
-      - name: Get Go diff
-        id: diff
-        run: |
-          BASE_SHA=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_sha || github.event.pull_request.base.sha }}
-          MERGE_SHA=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.merge_sha || github.event.pull_request.merge_commit_sha }}
-          DIFF=$(git diff "$BASE_SHA" "$MERGE_SHA" -- '*.go')
-          if [ -z "$DIFF" ]; then
-            echo "No Go changes detected"
-            echo "has_diff=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          echo "$DIFF" > /tmp/go_diff.txt
-          echo "has_diff=true" >> $GITHUB_OUTPUT
+#       - name: Get Go diff
+#         id: diff
+#         run: |
+#           BASE_SHA=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_sha || github.event.pull_request.base.sha }}
+#           MERGE_SHA=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.merge_sha || github.event.pull_request.merge_commit_sha }}
+#           DIFF=$(git diff "$BASE_SHA" "$MERGE_SHA" -- '*.go')
+#           if [ -z "$DIFF" ]; then
+#             echo "No Go changes detected"
+#             echo "has_diff=false" >> $GITHUB_OUTPUT
+#             exit 0
+#           fi
+#           echo "$DIFF" > /tmp/go_diff.txt
+#           echo "has_diff=true" >> $GITHUB_OUTPUT
 
-          # Collect full Go repo file tree for layout mirroring
-          find . -name '*.go' -not -path './.git/*' | sort > /tmp/go_tree.txt
+#           # Collect full Go repo file tree for layout mirroring
+#           find . -name '*.go' -not -path './.git/*' | sort > /tmp/go_tree.txt
 
-          echo "========== GO DIFF =========="
-          cat /tmp/go_diff.txt
-          echo "============================="
-          echo "========== GO TREE =========="
-          cat /tmp/go_tree.txt
-          echo "============================="
+#           echo "========== GO DIFF =========="
+#           cat /tmp/go_diff.txt
+#           echo "============================="
+#           echo "========== GO TREE =========="
+#           cat /tmp/go_tree.txt
+#           echo "============================="
 
-      - name: Analyze Go changes
-        if: steps.diff.outputs.has_diff == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python3 -c "
-          import json
-          diff = open('/tmp/go_diff.txt').read()
-          prompt = open('.github/prompts/analyze_go.txt').read().replace('DIFF_PLACEHOLDER', diff)
-          payload = {
-            'model': 'openai/gpt-4.1-mini',
-            'messages': [{'role': 'user', 'content': prompt}],
-            'temperature': 0.1
-          }
-          print(json.dumps(payload))
-          " > /tmp/payload.json
+#       - name: Analyze Go changes
+#         if: steps.diff.outputs.has_diff == 'true'
+#         env:
+#           CROSS_REPO_PAT: ${{ secrets.CROSS_REPO_PAT }}
+#         run: |
+#           python3 -c "
+#           import json
+#           diff = open('/tmp/go_diff.txt').read()
+#           prompt = open('.github/prompts/analyze_go.txt').read().replace('DIFF_PLACEHOLDER', diff)
+#           payload = {
+#             'model': 'openai/gpt-4.1-mini',
+#             'messages': [{'role': 'user', 'content': prompt}],
+#             'temperature': 0.1
+#           }
+#           print(json.dumps(payload))
+#           " > /tmp/payload.json
 
-          RESPONSE=$(curl -s -X POST \
-            "https://models.github.ai/inference/chat/completions" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d @/tmp/payload.json)
+#           RESPONSE=$(curl -s -X POST \
+#             "https://models.github.ai/inference/chat/completions" \
+-H "Authorization: Bearer $CROSS_REPO_PAT" \
+#             -H "Content-Type: application/json" \
+#             -d @/tmp/payload.json)
 
-          ANALYSIS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Failed to parse response"')
+#           ANALYSIS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Failed to parse response"')
 
-          echo "========== AI ANALYSIS =========="
-          echo "$ANALYSIS"
-          echo "================================="
+#           echo "========== AI ANALYSIS =========="
+#           echo "$ANALYSIS"
+#           echo "================================="
 
-          echo "$ANALYSIS" > /tmp/go_analysis.txt
+#           echo "$ANALYSIS" > /tmp/go_analysis.txt
 
-      - name: Generate Rust changes
-        if: steps.diff.outputs.has_diff == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Collect all Rust project files: .rs sources + Cargo.toml
-          RUST_CODE=""
-          while IFS= read -r -d '' f; do
-            RELATIVE=${f#rust-repo/}
-            RUST_CODE="$RUST_CODE
-          // FILE: $RELATIVE
-          $(cat "$f")
-          "
-          done < <(find rust-repo -not -path '*/target/*' -not -path '*/.git/*' \
-            \( -name '*.rs' -o -name 'Cargo.toml' \) -print0 | sort -z)
+#       - name: Generate Rust changes
+#         if: steps.diff.outputs.has_diff == 'true'
+#         env:
+#           CROSS_REPO_PAT: ${{ secrets.CROSS_REPO_PAT }}
+#         run: |
+#           # Collect all Rust project files: .rs sources + Cargo.toml
+#           RUST_CODE=""
+#           while IFS= read -r -d '' f; do
+#             RELATIVE=${f#rust-repo/}
+#             RUST_CODE="$RUST_CODE
+#           // FILE: $RELATIVE
+#           $(cat "$f")
+#           "
+#           done < <(find rust-repo -not -path '*/target/*' -not -path '*/.git/*' \
+#             \( -name '*.rs' -o -name 'Cargo.toml' \) -print0 | sort -z)
 
-          if [ -z "$RUST_CODE" ]; then
-            RUST_CODE="// No Rust source files found"
-          fi
+#           if [ -z "$RUST_CODE" ]; then
+#             RUST_CODE="// No Rust source files found"
+#           fi
 
-          echo "$RUST_CODE" > /tmp/rust_code.txt
+#           echo "$RUST_CODE" > /tmp/rust_code.txt
 
-          # Collect Rust file tree
-          find rust-repo -not -path '*/target/*' -not -path '*/.git/*' \
-            \( -name '*.rs' -o -name 'Cargo.toml' \) | sed 's|rust-repo/||' | sort > /tmp/rust_tree.txt
+#           # Collect Rust file tree
+#           find rust-repo -not -path '*/target/*' -not -path '*/.git/*' \
+#             \( -name '*.rs' -o -name 'Cargo.toml' \) | sed 's|rust-repo/||' | sort > /tmp/rust_tree.txt
 
-          python3 -c "
-          import json
-          analysis = open('/tmp/go_analysis.txt').read()
-          rust_code = open('/tmp/rust_code.txt').read()
-          go_tree = open('/tmp/go_tree.txt').read()
-          rust_tree = open('/tmp/rust_tree.txt').read()
-          prompt = open('.github/prompts/generate_rust.txt').read() \
-            .replace('ANALYSIS_PLACEHOLDER', analysis) \
-            .replace('RUST_CODE_PLACEHOLDER', rust_code) \
-            .replace('GO_TREE_PLACEHOLDER', go_tree) \
-            .replace('RUST_TREE_PLACEHOLDER', rust_tree)
-          payload = {
-            'model': 'openai/gpt-4.1-mini',
-            'messages': [{'role': 'user', 'content': prompt}],
-            'temperature': 0.1
-          }
-          print(json.dumps(payload))
-          " > /tmp/rust_payload.json
+#           python3 -c "
+#           import json
+#           analysis = open('/tmp/go_analysis.txt').read()
+#           rust_code = open('/tmp/rust_code.txt').read()
+#           go_tree = open('/tmp/go_tree.txt').read()
+#           rust_tree = open('/tmp/rust_tree.txt').read()
+#           prompt = open('.github/prompts/generate_rust.txt').read() \
+#             .replace('ANALYSIS_PLACEHOLDER', analysis) \
+#             .replace('RUST_CODE_PLACEHOLDER', rust_code) \
+#             .replace('GO_TREE_PLACEHOLDER', go_tree) \
+#             .replace('RUST_TREE_PLACEHOLDER', rust_tree)
+#           payload = {
+#             'model': 'openai/gpt-4.1-mini',
+#             'messages': [{'role': 'user', 'content': prompt}],
+#             'temperature': 0.1
+#           }
+#           print(json.dumps(payload))
+#           " > /tmp/rust_payload.json
 
-          RESPONSE=$(curl -s -X POST \
-            "https://models.github.ai/inference/chat/completions" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d @/tmp/rust_payload.json)
+#           RESPONSE=$(curl -s -X POST \
+#             "https://models.github.ai/inference/chat/completions" \
+             -H "Authorization: Bearer $CROSS_REPO_PAT" \
+#             -H "Content-Type: application/json" \
+#             -d @/tmp/rust_payload.json)
 
-          CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "FAILED"')
+#           CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "FAILED"')
 
-          echo "========== AI RUST OUTPUT =========="
-          echo "$CONTENT"
-          echo "===================================="
+#           echo "========== AI RUST OUTPUT =========="
+#           echo "$CONTENT"
+#           echo "===================================="
 
-          echo "$CONTENT" > /tmp/rust_output.txt
+#           echo "$CONTENT" > /tmp/rust_output.txt
 
-      - name: Generate PR summary
-        if: steps.diff.outputs.has_diff == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          RUST_OUTPUT=$(cat /tmp/rust_output.txt)
-          if [ "$RUST_OUTPUT" = "NO CHANGES NEEDED" ] || [ "$RUST_OUTPUT" = "FAILED" ]; then
-            echo "No PR summary needed"
-            exit 0
-          fi
+#       - name: Generate PR summary
+#         if: steps.diff.outputs.has_diff == 'true'
+#         env:
+#           CROSS_REPO_PAT: ${{ secrets.CROSS_REPO_PAT }}
+#         run: |
+#           RUST_OUTPUT=$(cat /tmp/rust_output.txt)
+#           if [ "$RUST_OUTPUT" = "NO CHANGES NEEDED" ] || [ "$RUST_OUTPUT" = "FAILED" ]; then
+#             echo "No PR summary needed"
+#             exit 0
+#           fi
 
-          python3 -c "
-          import json
-          analysis = open('/tmp/go_analysis.txt').read()
-          rust_output = open('/tmp/rust_output.txt').read()
-          prompt = open('.github/prompts/pr_summary.txt').read() \
-            .replace('ANALYSIS_PLACEHOLDER', analysis) \
-            .replace('RUST_OUTPUT_PLACEHOLDER', rust_output)
-          payload = {
-            'model': 'openai/gpt-4.1-mini',
-            'messages': [{'role': 'user', 'content': prompt}],
-            'temperature': 0.1
-          }
-          print(json.dumps(payload))
-          " > /tmp/summary_payload.json
+#           python3 -c "
+#           import json
+#           analysis = open('/tmp/go_analysis.txt').read()
+#           rust_output = open('/tmp/rust_output.txt').read()
+#           prompt = open('.github/prompts/pr_summary.txt').read() \
+#             .replace('ANALYSIS_PLACEHOLDER', analysis) \
+#             .replace('RUST_OUTPUT_PLACEHOLDER', rust_output)
+#           payload = {
+#             'model': 'openai/gpt-4.1-mini',
+#             'messages': [{'role': 'user', 'content': prompt}],
+#             'temperature': 0.1
+#           }
+#           print(json.dumps(payload))
+#           " > /tmp/summary_payload.json
 
-          RESPONSE=$(curl -s -X POST \
-            "https://models.github.ai/inference/chat/completions" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d @/tmp/summary_payload.json)
+#           RESPONSE=$(curl -s -X POST \
+#             "https://models.github.ai/inference/chat/completions" \
+             -H "Authorization: Bearer $CROSS_REPO_PAT" \
+#             -H "Content-Type: application/json" \
+#             -d @/tmp/summary_payload.json)
 
-          SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Failed to generate summary"')
+#           SUMMARY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Failed to generate summary"')
 
-          echo "========== PR SUMMARY =========="
-          echo "$SUMMARY"
-          echo "================================"
+#           echo "========== PR SUMMARY =========="
+#           echo "$SUMMARY"
+#           echo "================================"
 
-          echo "$SUMMARY" > /tmp/pr_summary.txt
+#           echo "$SUMMARY" > /tmp/pr_summary.txt
 
-      - name: Apply changes and create PR
-        if: steps.diff.outputs.has_diff == 'true'
-        env:
-          CROSS_REPO_PAT: ${{ secrets.CROSS_REPO_PAT }}
-        run: |
-          CONTENT=$(cat /tmp/rust_output.txt)
+#       - name: Apply changes and create PR
+#         if: steps.diff.outputs.has_diff == 'true'
+#         env:
+#           CROSS_REPO_PAT: ${{ secrets.CROSS_REPO_PAT }}
+#         run: |
+#           CONTENT=$(cat /tmp/rust_output.txt)
 
-          if [ "$CONTENT" = "NO CHANGES NEEDED" ] || [ "$CONTENT" = "FAILED" ]; then
-            echo "No Rust changes to apply"
-            exit 0
-          fi
+#           if [ "$CONTENT" = "NO CHANGES NEEDED" ] || [ "$CONTENT" = "FAILED" ]; then
+#             echo "No Rust changes to apply"
+#             exit 0
+#           fi
 
-          # Parse JSON and write files
-          python3 -c "
-          import json, os
+#           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+#             BRANCH="${{ github.event.inputs.pr_branch }}"
+#             GO_PR_TITLE="${{ github.event.inputs.pr_title }}"
+#             GO_PR_URL="${{ github.event.inputs.pr_url }}"
+#           else
+#             BRANCH="${{ github.event.pull_request.head.ref }}"
+#             GO_PR_TITLE="${{ github.event.pull_request.title }}"
+#             GO_PR_URL="${{ github.event.pull_request.html_url }}"
+#           fi
 
-          content = open('/tmp/rust_output.txt').read().strip()
-          if content.startswith('\`\`\`'):
-            content = '\n'.join(content.split('\n')[1:])
-          if content.endswith('\`\`\`'):
-            content = '\n'.join(content.split('\n')[:-1])
+#           cd rust-repo
 
-          files = json.loads(content)
-          for path, code in files.items():
-            full = os.path.join('rust-repo', path)
-            os.makedirs(os.path.dirname(full), exist_ok=True)
-            with open(full, 'w') as f:
-              f.write(code)
-            print(f'Written: {full}')
-          "
+#           git config user.name "code-prism-bot"
+#           git config user.email "code-prism-bot@users.noreply.github.com"
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BRANCH="${{ github.event.inputs.pr_branch }}"
-            GO_PR_TITLE="${{ github.event.inputs.pr_title }}"
-            GO_PR_URL="${{ github.event.inputs.pr_url }}"
-          else
-            BRANCH="${{ github.event.pull_request.head.ref }}"
-            GO_PR_TITLE="${{ github.event.pull_request.title }}"
-            GO_PR_URL="${{ github.event.pull_request.html_url }}"
-          fi
+#           # Checkout existing remote branch or create a new one
+#           if git ls-remote --exit-code origin "$BRANCH" > /dev/null 2>&1; then
+#             echo "Branch $BRANCH already exists on remote, checking it out"
+#             git fetch origin "$BRANCH"
+#             git checkout -b "$BRANCH" "origin/$BRANCH"
+#           else
+#             git checkout -b "$BRANCH"
+#           fi
 
-          cd rust-repo
+#           # Write AI-generated files after checkout to avoid conflicts
+#           cd ..
+#           python3 -c "
+#           import json, os
 
-          git config user.name "code-prism-bot"
-          git config user.email "code-prism-bot@users.noreply.github.com"
+#           content = open('/tmp/rust_output.txt').read().strip()
+#           if content.startswith('\`\`\`'):
+#             content = '\n'.join(content.split('\n')[1:])
+#           if content.endswith('\`\`\`'):
+#             content = '\n'.join(content.split('\n')[:-1])
 
-          # Checkout existing remote branch or create a new one
-          if git ls-remote --exit-code origin "$BRANCH" > /dev/null 2>&1; then
-            echo "Branch $BRANCH already exists on remote, checking it out"
-            git fetch origin "$BRANCH"
-            git checkout -b "$BRANCH" "origin/$BRANCH"
-          else
-            git checkout -b "$BRANCH"
-          fi
+#           files = json.loads(content)
+#           for path, code in files.items():
+#             full = os.path.join('rust-repo', path)
+#             os.makedirs(os.path.dirname(full), exist_ok=True)
+#             with open(full, 'w') as f:
+#               f.write(code)
+#             print(f'Written: {full}')
+#           "
+#           cd rust-repo
 
-          git add -A
+#           git add -A
 
-          if git diff --cached --quiet; then
-            echo "No file changes to commit"
-          else
-            git commit -m "$GO_PR_TITLE"
-            git push "https://x-access-token:${CROSS_REPO_PAT}@github.com/CubikRuubik/rust-prism.git" "$BRANCH"
-          fi
+#           if git diff --cached --quiet; then
+#             echo "No file changes to commit"
+#           else
+#             git commit -m "$GO_PR_TITLE"
+#             git push "https://x-access-token:${CROSS_REPO_PAT}@github.com/CubikRuubik/rust-prism.git" "$BRANCH"
+#           fi
 
-          # Check if a PR already exists for this branch
-          EXISTING_PR=$(curl -s \
-            -H "Authorization: token $CROSS_REPO_PAT" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/CubikRuubik/rust-prism/pulls?head=CubikRuubik:${BRANCH}&state=open" \
-            | jq -r '.[0].html_url // ""')
+#           # Check if a PR already exists for this branch
+#           EXISTING_PR=$(curl -s \
+#             -H "Authorization: token $CROSS_REPO_PAT" \
+#             -H "Accept: application/vnd.github+json" \
+#             "https://api.github.com/repos/CubikRuubik/rust-prism/pulls?head=CubikRuubik:${BRANCH}&state=open" \
+#             | jq -r '.[0].html_url // ""')
 
-          if [ -n "$EXISTING_PR" ]; then
-            echo "PR already exists: $EXISTING_PR"
-          else
-            curl -s -X POST \
-              -H "Authorization: token $CROSS_REPO_PAT" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/CubikRuubik/rust-prism/pulls" \
-              -d "$(python3 -c "
-          import json, os
-          summary = open('/tmp/pr_summary.txt').read() if os.path.exists('/tmp/pr_summary.txt') else 'Automated Rust translation of Go changes.'
-          analysis = open('/tmp/go_analysis.txt').read() if os.path.exists('/tmp/go_analysis.txt') else ''
-          body = summary
-          if analysis:
-            body += '\n\n---\n## Go Changes Analysis\n' + analysis
-          body += '\n\n---\nSource PR: $GO_PR_URL\n\n> Review carefully. LLM-generated code.'
-          print(json.dumps({
-            'title': '''$GO_PR_TITLE''',
-            'body': body,
-            'head': '$BRANCH',
-            'base': 'main'
-          }))")"
-          fi
+#           if [ -n "$EXISTING_PR" ]; then
+#             echo "PR already exists: $EXISTING_PR"
+#           else
+#             curl -s -X POST \
+#               -H "Authorization: token $CROSS_REPO_PAT" \
+#               -H "Accept: application/vnd.github+json" \
+#               "https://api.github.com/repos/CubikRuubik/rust-prism/pulls" \
+#               -d "$(python3 -c "
+#           import json, os
+#           summary = open('/tmp/pr_summary.txt').read() if os.path.exists('/tmp/pr_summary.txt') else 'Automated Rust translation of Go changes.'
+#           analysis = open('/tmp/go_analysis.txt').read() if os.path.exists('/tmp/go_analysis.txt') else ''
+#           body = summary
+#           if analysis:
+#             body += '\n\n---\n## Go Changes Analysis\n' + analysis
+#           body += '\n\n---\nSource PR: $GO_PR_URL\n\n> Review carefully. LLM-generated code.'
+#           print(json.dumps({
+#             'title': '''$GO_PR_TITLE''',
+#             'body': body,
+#             'head': '$BRANCH',
+#             'base': 'main'
+#           }))")"
+#           fi
