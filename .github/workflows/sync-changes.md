@@ -40,8 +40,8 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
    - Use the same PR title as the original PR
    - Use the bullet-point change plan as the PR description
    - Create a branch with the same name as the original PR branch name
-   - Target the `main` branch
-   - Use the GitHub token to access other repositories via `target-repo`
+
+- Use the GitHub token to access other repositories via `repo`
 
 ## Guidelines
 
@@ -49,7 +49,7 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
 - **PR titles**: Use the exact title from the merged PR
 - **Branch naming**: Use the original PR branch name (retrieve via GitHub API using the PR number)
 - **Target repos**: Use the full `owner/repo` notation from the dependent-repos.json file
-- **Cross-repo settings**: When creating PRs in other repos, always include `target-repo: "owner/repo"` in the safe output to specify the destination repository
+- **Cross-repo settings**: When creating PRs in other repos, always include `repo: "owner/repo"` in the safe output to specify the destination repository
 
 ## Safe Outputs
 
@@ -59,7 +59,6 @@ When creating each pull request:
   - `title`: The exact title from the merged PR
   - `body`: The detailed bullet-point change plan
   - `branch`: The branch name from the merged PR
-  - `target-repo`: Each dependent repository in turn
-  - `target-branch`: "main"
+  - `repo`: Each dependent repository in turn
 
 If no dependent repos are configured or errors occur, use `noop` to signal completion.
