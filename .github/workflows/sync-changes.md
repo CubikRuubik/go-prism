@@ -11,6 +11,18 @@ permissions:
   pull-requests: read
   issues: read
 
+steps:
+  - name: Checkout main repository
+    uses: actions/checkout@v6
+    with:
+      persist-credentials: false
+  - name: Checkout dependent repository workspace
+    uses: actions/checkout@v6
+    with:
+      repository: CubikRuubik/rust-prism
+      persist-credentials: false
+      path: CubikRuubik/rust-prism
+
 tools:
   github:
     toolsets: [default, repos, pull_requests]
@@ -43,8 +55,7 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
    - Use the bullet-point change plan as the PR description
    - Create a branch with the same name as the original PR branch name
    - Target the `main` branch
-
-- Use the `create-pull-request` **safe output** with `repo` to create the PR
+   - Use the `create-pull-request` **safe output** with `repo` to create the PR
 
 ## Guidelines
 
