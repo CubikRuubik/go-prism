@@ -34,26 +34,31 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
 
 ## Your Task
 
-1. **Analyze the merged PR**: Extract the PR title and analyze the diff to create a detailed bullet-point change plan describing what was changed
-2. **Load dependent repositories**: Read `.github/dependent-repos.json` from the current repository to get the list of dependent repos
-3. **Create PRs in each dependent repo**: For each repository in the list:
+1. **Analyze the merged PR**: Extract the PR title and retrieve the list of files changed in the merged PR
+2. **Check for logical changes**: Determine whether the merged PR contains any changes outside of repo-specific files. Repo-specific files are those under `.github/` (workflows, agents, prompts, etc.). If **all** changed files are under `.github/`, there are no logical changes that need propagating — use `noop` to signal completion and stop here.
+3. **Analyze the diff**: For PRs that do contain logical changes, analyze the diff to create a detailed bullet-point change plan describing what was changed
+4. **Load dependent repositories**: Read `.github/dependent-repos.json` from the current repository to get the list of dependent repos
+5. **Create PRs in each dependent repo**: For each repository in the list:
    - Use the same PR title as the original PR
    - Use the bullet-point change plan as the PR description
    - Create a branch with the same name as the original PR branch name
-
-- Use the GitHub token to access other repositories via `repo`
+   - Target the `main` branch
+   - Use the `create-pull-request` **safe output** with `target-repo` to create the PR — do NOT use any local checkout tool, `git clone`, or the `create_pull_request` MCP tool
 
 ## Guidelines
 
+- **Repo-specific files**: Any file whose path starts with `.github/` is considered repo-specific and does not need to be propagated to dependent repos
+- **Skip condition**: If every file changed in the merged PR is repo-specific (i.e., all paths start with `.github/`), call `noop` and stop — do not create any PRs in dependent repos
 - **Change plan format**: Present changes as a structured bullet-point list with clear categories (e.g., "Features", "Fixes", "Breaking Changes", "Dependencies", "Documentation")
 - **PR titles**: Use the exact title from the merged PR
 - **Branch naming**: Use the original PR branch name (retrieve via GitHub API using the PR number)
 - **Target repos**: Use the full `owner/repo` notation from the dependent-repos.json file
-- **Cross-repo settings**: When creating PRs in other repos, always include `repo: "owner/repo"` in the safe output to specify the destination repository
+- **Cross-repo settings**: When creating PRs in other repos, always include `target-repo: "owner/repo"` in the safe output to specify the destination repository
+- **No local checkout needed**: Cross-repo PR creation does not require the dependent repository to be checked out in the workspace. The `create-pull-request` safe output handles cross-repo access automatically via the `GH_AW_CROSS_REPO_PAT` token
 
 ## Safe Outputs
 
-When creating each pull request:
+When creating each pull request, use the `create-pull-request` **safe output** — this is the only supported mechanism for cross-repo PR creation. Do **not** attempt to check out or clone the dependent repository; the safe output handles cross-repo access automatically via the `GH_AW_CROSS_REPO_PAT` token.
 
 - Call `create-pull-request` with:
   - `title`: The exact title from the merged PR
@@ -61,4 +66,4 @@ When creating each pull request:
   - `branch`: The branch name from the merged PR
   - `repo`: Each dependent repository in turn
 
-If no dependent repos are configured or errors occur, use `noop` to signal completion.
+If no dependent repos are configured, all changes are repo-specific, or errors occur, use `noop` to signal completion.
