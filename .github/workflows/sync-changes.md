@@ -64,7 +64,6 @@ When creating each pull request, use the `create-pull-request` **safe output** â
   - `title`: The exact title from the merged PR
   - `body`: The detailed bullet-point change plan
   - `branch`: The branch name from the merged PR
-  - `target-repo`: Each dependent repository in turn
-  - `target-branch`: "main"
+  - `repo`: Each dependent repository in turn
 
 If no dependent repos are configured, all changes are repo-specific, or errors occur, use `noop` to signal completion.
