@@ -19,6 +19,8 @@ safe-outputs:
   github-token: ${{ secrets.GH_AW_CROSS_REPO_PAT }}
   create-pull-request:
     max: 10
+    allowed-repos:
+      - CubikRuubik/rust-prism
 
 network:
   allowed:
