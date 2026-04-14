@@ -21,7 +21,8 @@ safe-outputs:
     max: 10
     allowed-repos:
       - CubikRuubik/rust-prism
-
+    excluded-files:
+      - ".github/**"
 network:
   allowed:
     - defaults
