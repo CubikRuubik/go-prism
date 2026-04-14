@@ -35,10 +35,9 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
 ## Your Task
 
 1. **Analyze the merged PR**: Extract the PR title and retrieve the list of files changed in the merged PR
-2. **Check for logical changes**: Determine whether the merged PR contains any changes outside of repo-specific files. Repo-specific files are those under `.github/` (workflows, agents, prompts, etc.). If **all** changed files are under `.github/`, there are no logical changes that need propagating — use `noop` to signal completion and stop here.
-3. **Analyze the diff**: For PRs that do contain logical changes, analyze the diff to create a detailed bullet-point change plan describing what was changed
-4. **Load dependent repositories**: Read `.github/dependent-repos.json` from the current repository to get the list of dependent repos
-5. **Create PRs in each dependent repo**: For each repository in the list:
+2. **Analyze the diff**: Analyze the diff to create a detailed bullet-point change plan describing what was changed
+3. **Load dependent repositories**: Read `.github/dependent-repos.json` from the current repository to get the list of dependent repos
+4. **Create PRs in each dependent repo**: For each repository in the list:
    - Use the same PR title as the original PR
    - Use the bullet-point change plan as the PR description
    - Create a branch with the same name as the original PR branch name
@@ -48,8 +47,6 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
 
 ## Guidelines
 
-- **Repo-specific files**: Any file whose path starts with `.github/` is considered repo-specific and does not need to be propagated to dependent repos
-- **Skip condition**: If every file changed in the merged PR is repo-specific (i.e., all paths start with `.github/`), call `noop` and stop — do not create any PRs in dependent repos
 - **Change plan format**: Present changes as a structured bullet-point list with clear categories (e.g., "Features", "Fixes", "Breaking Changes", "Dependencies", "Documentation")
 - **PR titles**: Use the exact title from the merged PR
 - **Branch naming**: Use the original PR branch name (retrieve via GitHub API using the PR number)
@@ -67,4 +64,4 @@ When creating each pull request, use the `create-pull-request` **safe output**.
   - `branch`: The branch name from the merged PR
   - `repo`: Each dependent repository in turn
 
-If no dependent repos are configured, all changes are repo-specific, or errors occur, use `noop` to signal completion.
+If no dependent repos are configured or errors occur, use `noop` to signal completion.
