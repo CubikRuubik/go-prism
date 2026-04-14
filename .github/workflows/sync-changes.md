@@ -43,7 +43,7 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
    - Use the bullet-point change plan as the PR description
    - Create a branch with the same name as the original PR branch name
    - Target the `main` branch
-   - Use the GitHub token to access other repositories via `target-repo`
+   - Use the `create-pull-request` **safe output** with `target-repo` to create the PR — do NOT use any local checkout tool, `git clone`, or the `create_pull_request` MCP tool
 
 ## Guidelines
 
@@ -54,10 +54,11 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
 - **Branch naming**: Use the original PR branch name (retrieve via GitHub API using the PR number)
 - **Target repos**: Use the full `owner/repo` notation from the dependent-repos.json file
 - **Cross-repo settings**: When creating PRs in other repos, always include `target-repo: "owner/repo"` in the safe output to specify the destination repository
+- **No local checkout needed**: Cross-repo PR creation does not require the dependent repository to be checked out in the workspace. The `create-pull-request` safe output handles cross-repo access automatically via the `GH_AW_CROSS_REPO_PAT` token
 
 ## Safe Outputs
 
-When creating each pull request:
+When creating each pull request, use the `create-pull-request` **safe output** — this is the only supported mechanism for cross-repo PR creation. Do **not** attempt to check out or clone the dependent repository; the safe output handles cross-repo access automatically via the `GH_AW_CROSS_REPO_PAT` token.
 
 - Call `create-pull-request` with:
   - `title`: The exact title from the merged PR
