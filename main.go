@@ -1,6 +1,5 @@
 package main
 
 func main() {
-	g := NewGreeter("World")
-	g.Greet()
+	println("Hello world!");
 }
