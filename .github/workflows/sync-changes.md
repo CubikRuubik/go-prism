@@ -1,5 +1,5 @@
 ---
-description: Analyze merged PR changes and create synchronization PRs in dependent repositories
+description: Analyze merged PR changes and create description-only PRs in dependent repositories
 on:
   pull_request:
     types: [closed]
@@ -16,12 +16,6 @@ steps:
     uses: actions/checkout@v6
     with:
       persist-credentials: false
-  - name: Checkout dependent repository workspace
-    uses: actions/checkout@v6
-    with:
-      repository: CubikRuubik/rust-prism
-      persist-credentials: false
-      path: CubikRuubik/rust-prism
 
 tools:
   github:
@@ -31,8 +25,6 @@ safe-outputs:
   github-token: ${{ secrets.GH_AW_CROSS_REPO_PAT }}
   create-pull-request:
     max: 10
-    allowed-repos:
-      - CubikRuubik/rust-prism
     excluded-files:
       - ".github/**"
 network:
@@ -42,28 +34,28 @@ network:
 
 # Sync Changes to Dependent Repositories
 
-You are an AI agent that analyzes changes merged to the go-prism repository and propagates them to dependent repositories via pull requests.
+You are an AI agent that analyzes changes merged to the go-prism repository and opens description-only pull requests in each dependent repository. You do **not** write or modify any code in the dependent repositories — that is handled by each dependent repo's own workflow.
 
 ## Your Task
 
-1. **Analyze the merged PR**: Extract the PR title and retrieve the list of files changed in the merged PR
-2. **Analyze the diff**: Analyze the diff to create a detailed bullet-point change plan describing what was changed
+1. **Analyze the merged PR**: Extract the PR title and retrieve the diff of the merged PR
+2. **Generate a change description**: Produce a detailed, language-agnostic bullet-point description of what changed (semantics and intent, not Go-specific syntax)
 3. **Load dependent repositories**: Read `.github/dependent-repos.json` from the current repository to get the list of dependent repos
-4. **Create PRs in each dependent repo**: For each repository in the list:
+4. **Create a description-only PR in each dependent repo**: For each repository in the list:
    - Use the same PR title as the original PR
-   - Use the bullet-point change plan as the PR description
-   - Create a branch with the same name as the original PR branch name
+   - Use the detailed change description as the PR body
+   - Use the same branch name as the original PR branch
    - Target the `main` branch
-   - Use the `create-pull-request` **safe output** with `repo` to create the PR
+   - Use the `create-pull-request` **safe output** with `repo` set to the dependent repo
 
 ## Guidelines
 
-- **Change plan format**: Present changes as a structured bullet-point list with clear categories (e.g., "Features", "Fixes", "Breaking Changes", "Dependencies", "Documentation")
+- **Change description format**: Structured bullet-point list with clear categories (e.g., "Features", "Fixes", "Breaking Changes", "Dependencies", "Documentation"). Describe *what* changed and *why*, in language-agnostic terms — no Go syntax, just semantics and intent.
+- **No file changes**: Do not create, modify, or delete any files in the dependent repositories. The PR body is the only output.
 - **PR titles**: Use the exact title from the merged PR
 - **Branch naming**: Use the original PR branch name (retrieve via GitHub API using the PR number)
-- **Target repos**: Use the full `owner/repo` notation from the dependent-repos.json file
-- **Cross-repo settings**: When creating PRs in other repos, always include `repo: "owner/repo"` in the safe output to specify the destination repository
-- **Checkout requirement**: The workflow runtime must check out each dependent repository into the workspace before processing the `create-pull-request` safe output
+- **Target repos**: Read the full `owner/repo` list from `.github/dependent-repos.json` — never hardcode repository names
+- **Cross-repo settings**: Always include `repo: "owner/repo"` in the `create-pull-request` safe output to specify the destination repository
 
 ## Safe Outputs
 
@@ -71,8 +63,8 @@ When creating each pull request, use the `create-pull-request` **safe output**.
 
 - Call `create-pull-request` with:
   - `title`: The exact title from the merged PR
-  - `body`: The detailed bullet-point change plan
+  - `body`: The detailed language-agnostic change description
   - `branch`: The branch name from the merged PR
-  - `repo`: Each dependent repository in turn
+  - `repo`: Each dependent repository in turn (from `dependent-repos.json`)
 
 If no dependent repos are configured or errors occur, use `noop` to signal completion.

@@ -1,7 +1,12 @@
-Based on the following Go code analysis and the Rust changes that were applied, write a concise PR description suitable for a GitHub PR body. Use markdown. Include: what changed in Go, what was translated to Rust, and any important notes for reviewers.
+Based on the following analysis of changes in the go-prism repository, write a concise, language-agnostic PR description suitable for a GitHub PR body. Use markdown. Describe what changed and why in terms of behavior and intent — avoid language-specific syntax. Include clear sections for reviewers of any dependent repository (regardless of their implementation language).
+
+Sections to include (omit any that are not applicable):
+- **Summary**: One or two sentences describing the overall change
+- **Features**: New capabilities added
+- **Fixes**: Bugs or issues resolved
+- **Breaking Changes**: Any changes to public interfaces or behavior that dependent code must adapt to
+- **Dependencies**: New or updated external dependencies
+- **Documentation**: Notable documentation updates
 
 GO CHANGES ANALYSIS:
 ANALYSIS_PLACEHOLDER
-
-RUST CHANGES APPLIED:
-RUST_OUTPUT_PLACEHOLDER
