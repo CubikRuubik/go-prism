@@ -6,4 +6,5 @@ func main() {
 	println("Hello, World3!")
 	println("Hello, World4!")
 	println("Hello, World5!")
+	println("Hello, World6!")
 }
