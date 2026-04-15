@@ -49,9 +49,10 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
 1. **Analyze the merged PR**: Extract the PR title and retrieve the diff of the merged PR
 2. **Generate a change description**: Produce a detailed, language-agnostic bullet-point description of what changed (semantics and intent, not Go-specific syntax)
 3. **Load dependent repositories**: Read `.github/dependent-repos.json` from the current repository to get the list of dependent repos
-4. **Create a description-only PR in each dependent repo**: For each repository in the list:
+4. **Create a PR in each dependent repo**: For each repository in the list:
    - Use the same PR title as the original PR
    - Use the detailed change description as the PR body
+   - Create the file `change_plans/change_plan_nonce.md` in the checked-out dependent repo workspace with the same detailed change description as its content
 
 - Use the same branch name as the original PR branch as the first choice
 - If that branch is already used or cannot be reused, generate a fallback branch name: `<original-branch>-sync-<pr-number>`
@@ -61,7 +62,7 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
 ## Guidelines
 
 - **Change description format**: Structured bullet-point list with clear categories (e.g., "Features", "Fixes", "Breaking Changes", "Dependencies", "Documentation"). Describe _what_ changed and _why_, in language-agnostic terms — no Go syntax, just semantics and intent.
-- **No file changes**: Do not create, modify, or delete any files in the dependent repositories. The PR body is the only output.
+- **Change plan file**: Write the full change description to `change_plans/change_plan_nonce.md` in the checked-out dependent repo workspace before calling `create-pull-request`. This file is the only change committed to the branch.
 - **PR titles**: Use the exact title from the merged PR
 - **Branch naming**: Use the original PR branch name first. When a conflict exists, use `<original-branch>-sync-<pr-number>`
 - **Branch creation**: Always pass the chosen branch name in `create-pull-request`; if it does not exist yet in the target repository, the PR flow should create it from local changes.
@@ -77,5 +78,6 @@ When creating each pull request, use the `create-pull-request` **safe output**.
   - `body`: The detailed language-agnostic change description
   - `branch`: The selected branch name (original first, fallback when needed)
   - `repo`: Each dependent repository in turn (from `dependent-repos.json`)
+  - `path`: The path to the checked-out dependent repo workspace (e.g., `CubikRuubik/rust-prism`)
 
 If no dependent repos are configured or errors occur, use `noop` to signal completion.
