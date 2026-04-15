@@ -4,4 +4,5 @@ func main() {
 	println("Hello, World!")
 	println("Test")
 	println("Test2")
+	println("Test3")
 }
