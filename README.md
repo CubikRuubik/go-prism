@@ -1,13 +1,20 @@
 # go-prism
 
-A basic Go project with a hello world script.
+A basic Go project.
 
 ## Usage
 
-Run the hello world program:
+Run the program:
 
 ```bash
 go run main.go
 ```
 
-This will print "Hello, World!" to the console.
+Expected output:
+
+```
+Hello, World!
+Test
+Test2
+Test3
+```
