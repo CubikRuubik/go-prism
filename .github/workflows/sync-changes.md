@@ -52,17 +52,15 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
 4. **Create a PR in each dependent repo**: For each repository in the list:
    - Use the same PR title as the original PR
    - Use the detailed change description as the PR body
-   - Create the file `change_plans/change_plan_nonce.md` in the checked-out dependent repo workspace with the same detailed change description as its content
-
-- Use the same branch name as the original PR branch as the first choice
-- If that branch is already used or cannot be reused, generate a fallback branch name: `<original-branch>-sync-<pr-number>`
-- Target the `main` branch
-- Use the `create-pull-request` **safe output** with `repo` set to the dependent repo
+   - List existing `.md` files in `change_plans/` of the checked-out dependent repo; create `change_plans/change_plan_<N+1>.md` where N is the count found (use 1 if the directory is empty or missing)
+   - Use the same branch name as the original PR branch as the first choice; fallback to `<original-branch>-sync-<pr-number>` if already taken
+   - Target the `main` branch
+   - Use the `create-pull-request` **safe output** with `repo` set to the dependent repo
 
 ## Guidelines
 
 - **Change description format**: Structured bullet-point list with clear categories (e.g., "Features", "Fixes", "Breaking Changes", "Dependencies", "Documentation"). Describe _what_ changed and _why_, in language-agnostic terms — no Go syntax, just semantics and intent.
-- **Change plan file**: Write the full change description to `change_plans/change_plan_nonce.md` in the checked-out dependent repo workspace before calling `create-pull-request`. This file is the only change committed to the branch.
+- **Change plan file**: List existing `.md` files in `change_plans/` of the checked-out dependent repo, then write the full change description to `change_plans/change_plan_<N+1>.md` where N is the count of files found (starting at 1 if the directory is empty or missing). This file is the only change committed to the branch.
 - **PR titles**: Use the exact title from the merged PR
 - **Branch naming**: Use the original PR branch name first. When a conflict exists, use `<original-branch>-sync-<pr-number>`
 - **Branch creation**: Always pass the chosen branch name in `create-pull-request`; if it does not exist yet in the target repository, the PR flow should create it from local changes.
