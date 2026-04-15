@@ -52,16 +52,19 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
 4. **Create a description-only PR in each dependent repo**: For each repository in the list:
    - Use the same PR title as the original PR
    - Use the detailed change description as the PR body
-   - Use the same branch name as the original PR branch
-   - Target the `main` branch
-   - Use the `create-pull-request` **safe output** with `repo` set to the dependent repo
+
+- Use the same branch name as the original PR branch as the first choice
+- If that branch is already used or cannot be reused, generate a fallback branch name: `<original-branch>-sync-<pr-number>`
+- Target the `main` branch
+- Use the `create-pull-request` **safe output** with `repo` set to the dependent repo
 
 ## Guidelines
 
 - **Change description format**: Structured bullet-point list with clear categories (e.g., "Features", "Fixes", "Breaking Changes", "Dependencies", "Documentation"). Describe _what_ changed and _why_, in language-agnostic terms — no Go syntax, just semantics and intent.
 - **No file changes**: Do not create, modify, or delete any files in the dependent repositories. The PR body is the only output.
 - **PR titles**: Use the exact title from the merged PR
-- **Branch naming**: Use the original PR branch name (retrieve via GitHub API using the PR number)
+- **Branch naming**: Use the original PR branch name first. When a conflict exists, use `<original-branch>-sync-<pr-number>`
+- **Branch creation**: Always pass the chosen branch name in `create-pull-request`; if it does not exist yet in the target repository, the PR flow should create it from local changes.
 - **Target repos**: Read the full `owner/repo` list from `.github/dependent-repos.json` — never hardcode repository names
 - **Cross-repo settings**: Always include `repo: "owner/repo"` in the `create-pull-request` safe output to specify the destination repository
 
@@ -72,7 +75,7 @@ When creating each pull request, use the `create-pull-request` **safe output**.
 - Call `create-pull-request` with:
   - `title`: The exact title from the merged PR
   - `body`: The detailed language-agnostic change description
-  - `branch`: The branch name from the merged PR
+  - `branch`: The selected branch name (original first, fallback when needed)
   - `repo`: Each dependent repository in turn (from `dependent-repos.json`)
 
 If no dependent repos are configured or errors occur, use `noop` to signal completion.
