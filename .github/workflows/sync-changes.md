@@ -25,6 +25,8 @@ safe-outputs:
   github-token: ${{ secrets.GH_AW_CROSS_REPO_PAT }}
   create-pull-request:
     max: 10
+    allowed-repos:
+      - CubikRuubik/rust-prism
     excluded-files:
       - ".github/**"
 network:
@@ -50,7 +52,7 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
 
 ## Guidelines
 
-- **Change description format**: Structured bullet-point list with clear categories (e.g., "Features", "Fixes", "Breaking Changes", "Dependencies", "Documentation"). Describe *what* changed and *why*, in language-agnostic terms — no Go syntax, just semantics and intent.
+- **Change description format**: Structured bullet-point list with clear categories (e.g., "Features", "Fixes", "Breaking Changes", "Dependencies", "Documentation"). Describe _what_ changed and _why_, in language-agnostic terms — no Go syntax, just semantics and intent.
 - **No file changes**: Do not create, modify, or delete any files in the dependent repositories. The PR body is the only output.
 - **PR titles**: Use the exact title from the merged PR
 - **Branch naming**: Use the original PR branch name (retrieve via GitHub API using the PR number)
