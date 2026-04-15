@@ -16,6 +16,12 @@ steps:
     uses: actions/checkout@v6
     with:
       persist-credentials: false
+  - name: Checkout dependent repository workspace
+    uses: actions/checkout@v6
+    with:
+      repository: CubikRuubik/rust-prism
+      persist-credentials: false
+      path: CubikRuubik/rust-prism
 
 tools:
   github:
