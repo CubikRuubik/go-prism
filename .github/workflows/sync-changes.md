@@ -1,5 +1,5 @@
 ---
-description: Analyze merged PR changes and create description-only PRs in dependent repositories
+description: Analyze merged PR changes and create a description-only PR in each dependent repository
 on:
   pull_request:
     types: [closed]
@@ -42,7 +42,7 @@ network:
 
 # Sync Changes to Dependent Repositories
 
-You are an AI agent that analyzes changes merged to the go-prism repository and opens description-only pull requests in each dependent repository. You do **not** write or modify any code in the dependent repositories — that is handled by each dependent repo's own workflow.
+You are an AI agent that analyzes changes merged to the go-prism repository and opens pull requests with description of required changes in each dependent repository. You do **not** write or modify any code in the dependent repositories — that is handled by each dependent repo's own workflow.
 
 ## Your Task
 
