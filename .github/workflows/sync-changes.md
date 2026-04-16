@@ -16,12 +16,18 @@ steps:
     uses: actions/checkout@v6
     with:
       persist-credentials: false
-  - name: Checkout dependent repository workspace
+  - name: Checkout rust dependent repository workspace
     uses: actions/checkout@v6
     with:
       repository: CubikRuubik/rust-prism
       persist-credentials: false
       path: CubikRuubik/rust-prism
+  - name: Checkout python dependent repository workspace
+    uses: actions/checkout@v6
+    with:
+      repository: CubikRuubik/python-prism
+      persist-credentials: false
+      path: CubikRuubik/python-prism
 
 tools:
   github:
@@ -33,6 +39,7 @@ safe-outputs:
     max: 10
     allowed-repos:
       - CubikRuubik/rust-prism
+      - CubikRuubik/python-prism
     excluded-files:
       - ".github/**"
 network:
@@ -52,15 +59,17 @@ You are an AI agent that analyzes changes merged to the go-prism repository and 
 4. **Create a PR in each dependent repo**: For each repository in the list:
    - Use the same PR title as the original PR
    - Use the detailed change description as the PR body
-   - List existing `.md` files in `change_plans/` inside the `CubikRuubik/rust-prism` checkout directory (absolute path: `$GITHUB_WORKSPACE/CubikRuubik/rust-prism/change_plans/`); create `change_plans/change_plan_<N+1>.md` inside that same directory where N is the count found (use 1 if the directory is empty or missing)
-   - Use the same branch name as the original PR branch as the first choice; fallback to `<original-branch>-sync-<pr-number>` if already taken
-   - Target the `main` branch
-   - Use the `create-pull-request` **safe output** with `repo` set to the dependent repo
+
+- Use the repository identifier to derive the local checkout path as `$GITHUB_WORKSPACE/<owner>/<repo>` (for example, `CubikRuubik/rust-prism` maps to `$GITHUB_WORKSPACE/CubikRuubik/rust-prism`)
+- List existing `.md` files in `change_plans/` inside that repository checkout directory; create `change_plans/change_plan_<N+1>.md` inside the same directory where N is the count found (use 1 if the directory is empty or missing)
+- Use the same branch name as the original PR branch as the first choice; fallback to `<original-branch>-sync-<pr-number>` if already taken
+- Target the `main` branch
+- Use the `create-pull-request` **safe output** with `repo` set to the dependent repo and `path` set to that repo's checkout path
 
 ## Guidelines
 
 - **Change description format**: Structured bullet-point list with clear categories (e.g., "Features", "Fixes", "Breaking Changes", "Dependencies", "Documentation"). Describe _what_ changed and _why_, in language-agnostic terms — no Go syntax, just semantics and intent.
-- **Change plan file**: The dependent repo is checked out at `$GITHUB_WORKSPACE/CubikRuubik/rust-prism`. List existing `.md` files in `$GITHUB_WORKSPACE/CubikRuubik/rust-prism/change_plans/`, then write the full change description to `$GITHUB_WORKSPACE/CubikRuubik/rust-prism/change_plans/change_plan_<N+1>.md` where N is the count of files found (starting at 1 if the directory is empty or missing). **Do not write this file anywhere in the main `go-prism` workspace.** This file is the only change committed to the branch.
+- **Change plan file**: Each dependent repo is checked out at `$GITHUB_WORKSPACE/<owner>/<repo>`. For each target repo, list existing `.md` files in `$GITHUB_WORKSPACE/<owner>/<repo>/change_plans/`, then write the full change description to `$GITHUB_WORKSPACE/<owner>/<repo>/change_plans/change_plan_<N+1>.md` where N is the count of files found (starting at 1 if the directory is empty or missing). **Do not write this file anywhere in the main `go-prism` workspace.** This file is the only change committed to that repo branch.
 - **PR titles**: Use the exact title from the merged PR
 - **Branch naming**: Use the original PR branch name first. When a conflict exists, use `<original-branch>-sync-<pr-number>`
 - **Branch creation**: Always pass the chosen branch name in `create-pull-request`; if it does not exist yet in the target repository, the PR flow should create it from local changes.
@@ -76,6 +85,6 @@ When creating each pull request, use the `create-pull-request` **safe output**.
   - `body`: The detailed language-agnostic change description
   - `branch`: The selected branch name (original first, fallback when needed)
   - `repo`: Each dependent repository in turn (from `dependent-repos.json`)
-  - `path`: The path to the checked-out dependent repo workspace (e.g., `CubikRuubik/rust-prism`)
+  - `path`: The path to the checked-out dependent repo workspace derived from the repo name (for example, `CubikRuubik/rust-prism` or `CubikRuubik/python-prism`)
 
 If no dependent repos are configured or errors occur, use `noop` to signal completion.
