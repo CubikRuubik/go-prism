@@ -8,4 +8,5 @@ func main() {
 	println("Test4")
 	println("Test5")
 	println("Test6")
+	println("Test7")
 }
